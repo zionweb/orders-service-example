@@ -1,4 +1,4 @@
-name: prueba1
+name: orders-pipeline
 
 on:
   push:
@@ -16,14 +16,24 @@ jobs:
         with:
           java-version: "8"
           distribution: "adopt"
+
       - name: Test with Maven
         run: mvn test
 
+      - name: Build with Maven
+        run: mvn clean install
+
+      - name: Build Docker image
+        run: docker build -t orders-service-example:latest .
+  sonarqube-scan:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@master
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
             -Dsonar.projectKey=zionweb_orders-service-example
@@ -31,21 +41,16 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
             -Dsonar.java.binaries=target/classes  
-      - name: Build with Maven
-        run: mvn clean test
 
-      - name: Build Docker image
-        run: docker build -t orders-service-example:latest .
-
-  aprove:
-    needs: build-and-test
+  manual-aprove:
+    needs: sonarqube-scan
     runs-on: ubuntu-latest
     steps:
       - name: Approve
         run: echo "Approving..."
-        
+
   deploy:
-    needs: aprove
+    needs: manual-aprove
     runs-on: ubuntu-latest
     steps:
       - name: Deploy
