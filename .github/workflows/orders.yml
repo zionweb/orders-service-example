@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -36,4 +36,9 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t orders-service-example:latest .
-
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy
+        run: echo "Deploying..."
